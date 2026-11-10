@@ -6,6 +6,9 @@
   <title>알파학원 2027 수강신청</title>
   <meta name="description" content="알파학원 2027 수강신청 — 강의를 고르고 신청하거나, 내 신청을 조회·취소합니다.">
   <meta name="theme-color" content="#000000">
+  <!-- 구글 웹앱 서버와 미리 연결해 두어 첫 응답을 조금이라도 빠르게 -->
+  <link rel="preconnect" href="https://script.google.com" crossorigin>
+  <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
   <style>
 /* SUGANG — 색은 모두 여기서만 정한다 (SPEC 2장, 배너 이미지에서 잰 값) */
 :root {
@@ -151,6 +154,8 @@ fieldset.card > * + * { margin-top: 14px; }
 .btn-outline { background: var(--surface); color: var(--brand-dark); }
 .btn-outline:active { background: var(--brand-soft); }
 .btn-block { width: 100%; }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+.btn-ghost:active { background: var(--surface-2); }
 .btn-lg { min-height: 54px; font-size: 1.05rem; }
 
 /* 강의 카드 */
@@ -173,6 +178,7 @@ fieldset.card > * + * { margin-top: 14px; }
 .tag-ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
 .tag-wait { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
 .tag-closed { background: #EDEDEF; color: #55555A; border-color: transparent; }
+.tag-few { background: var(--brand-soft); color: #B3141B; border-color: transparent; }
 
 /* 고른 강의 */
 .picked .count { display: inline-block; min-width: 1.6em; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: var(--brand-dark); color: #fff; font-size: .85rem; text-align: center; }
@@ -400,6 +406,7 @@ fieldset.card > * + * { margin-top: 14px; }
         <div class="result-actions">
           <button type="button" class="btn btn-block" id="more">다른 강의 더 신청하기</button>
           <button type="button" class="btn btn-outline btn-block" id="go-lookup">내 신청 확인하기</button>
+          <button type="button" class="btn btn-ghost btn-block" id="go-home">처음 화면으로</button>
         </div>
       </section>
     </section>
@@ -617,6 +624,8 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
   function initGuide() {
     $('guide-head').addEventListener('click', () => setGuideOpen($('guide-body').hidden));
     $('start').addEventListener('click', () => {
+      // 신청 결과 화면에서 눌렀으면 새 학생(형제·자매) 입력으로 — 학생 정보를 비우고 신청서를 다시 보여 줌
+      if (!$('result').hidden) resetApplyForm();
       setGuideOpen(false);
       $('guide').scrollIntoView({ block: 'start', behavior: 'smooth' });
       setTimeout(() => $('f-name').focus({ preventScroll: true }), 250);
@@ -647,10 +656,12 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
     renderCourses();
   }
 
+  // 남은 자리 수는 보여 주지 않음 — 여유면 표시 없음, 얼마 안 남으면 「마감임박」(기준은 설정 시트)
   function courseTag(c) {
     if (c.closed) return el('span', 'tag tag-closed', '마감');
-    if (c.remaining > 0) return el('span', 'tag tag-ok', '남은 자리 ' + c.remaining);
-    return el('span', 'tag tag-wait', '정원 마감 · 대기 ' + c.waiting + '명');
+    if (c.seat === 'full') return el('span', 'tag tag-wait', '정원 마감 · 대기 ' + c.waiting + '명');
+    if (c.seat === 'few') return el('span', 'tag tag-few', '마감임박');
+    return null;
   }
 
   function renderCourses() {
@@ -675,7 +686,8 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
       label.appendChild(el('span', 'course-name', c.name));
       label.appendChild(el('span', 'course-meta', [c.time, c.teacher].filter(Boolean).join(' · ')));
       const tags = el('span', 'course-tags');
-      tags.appendChild(courseTag(c));
+      const seat = courseTag(c);
+      if (seat) tags.appendChild(seat);
       if (c.start) tags.appendChild(el('span', 'tag', '개강 ' + fmtDate(c.start)));
       tags.appendChild(el('span', 'tag', '정원 ' + c.capacity + '명'));
       if (c.grades.length > 1) tags.appendChild(el('span', 'tag', c.grades.join('·')));
@@ -867,9 +879,9 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
   }
 
   async function onMore() {
-    // 학생 정보는 그대로 두고 강의만 다시 고르기 (같은 줄에 추가됨)
+    // 학생 정보는 그대로 두고 강의만 다시 고르기 (같은 학생으로 아래에 새 줄)
     state.picked.clear();
-    await loadPublic();
+    await refreshPublic().catch(() => {});
     $('f-privacy').checked = false;
     $('f-parent-consent').checked = false;
     renderPicked();
@@ -1010,7 +1022,7 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
       $('cancel-dlg').close('done');
       renderLookup(res.body, '취소했습니다: ' + cancelTarget.info);
       $('lookup-result').focus();
-      loadPublic().catch(() => {}); // 신청 탭의 남은 자리도 새로
+      refreshPublic().catch(() => {}); // 신청 탭의 강의 상태도 새로
     } finally {
       go.disabled = false; go.textContent = state.pub.lookup.cancelButton;
     }
@@ -1026,18 +1038,80 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
     document.getElementById('tab-lookup').addEventListener('click', () => prefillLookup(false));
   }
 
+  // ── 처음 화면으로 (모든 입력 지우기) ─────────────────────
+  /** 신청서를 새 학생용으로 비움 (학생 정보 · 고른 강의 · 동의 · 오류 표시 · 결과 화면) */
+  function resetApplyForm() {
+    ['f-name', 'f-school', 'f-phone', 'f-parent', 'f-pin', 'f-pin2', 'f-hp'].forEach((id) => { $(id).value = ''; });
+    $('f-grade').value = '';
+    $('f-privacy').checked = false;
+    $('f-parent-consent').checked = false;
+    document.querySelectorAll('#apply-form [aria-invalid]').forEach((i) => i.removeAttribute('aria-invalid'));
+    state.picked.clear();
+    showFormError([]);
+    onGradeChange(); // 과목·강의 목록·학부모 동의 칸도 처음 상태로
+    $('picked-note').hidden = true;
+    $('result').hidden = true;
+    $('apply-form').hidden = false;
+  }
+  function resetLookup() {
+    $('l-name').value = '';
+    $('l-grade').value = '';
+    $('l-parent').value = '';
+    lookupError('');
+    $('lookup-result').hidden = true;
+    lk.who = null;
+    lk.items = [];
+  }
+  function goHome() {
+    resetApplyForm();
+    resetLookup();
+    state.lastStudent = null;
+    setGuideOpen(true);
+    setTab('apply');
+    window.scrollTo({ top: 0 });
+    refreshPublic().catch(() => {});
+  }
+
   // ── 불러오기 ──────────────────────────────────────
-  async function loadPublic() {
+  // 첫 화면을 빨리 띄우려고, 지난번에 받은 공개 정보(강의 목록·안내문 — 개인정보 없음)를 이 기기에 기억해 두고
+  // 먼저 그걸로 화면을 그린 뒤, 서버에서 최신 정보를 받으면 바로 바꿔 그린다.
+  const CACHE_KEY = 'sugang.public.v2';
+  const CACHE_MAX_MS = 7 * 86400000;
+  function readCache() {
+    try {
+      const o = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+      if (o && o.body && Array.isArray(o.body.courses) && Date.now() - o.at < CACHE_MAX_MS) return o.body;
+    } catch (e) { /* 기억이 없거나 막혀 있으면 서버에서 받음 */ }
+    return null;
+  }
+  function writeCache(body) {
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), body })); } catch (e) { /* 저장이 막혀 있어도 동작에는 지장 없음 */ }
+  }
+
+  async function fetchPublic() {
     const res = await api('/api/public');
     if (res.status !== 200) throw new Error((res.body && res.body.error) || '불러오지 못했습니다.');
-    state.pub = res.body;
+    return res.body;
+  }
+
+  /** 공개 정보를 화면에 반영(여러 번 불러도 입력값·고른 강의는 그대로) */
+  function applyPublic(body) {
+    state.pub = body;
     // 고른 강의도 최신 정보로(없어진 강의는 뺌)
-    const byId = new Map(state.pub.courses.map((c) => [c.id, c]));
+    const byId = new Map(body.courses.map((c) => [c.id, c]));
     Array.from(state.picked.keys()).forEach((id) => {
       if (byId.has(id)) state.picked.set(id, byId.get(id)); else state.picked.delete(id);
     });
+    renderStatic();
     renderSubjects();
-    return state.pub;
+    renderPicked();
+  }
+
+  async function refreshPublic() {
+    const body = await fetchPublic();
+    applyPublic(body);
+    writeCache(body);
+    return body;
   }
 
   function renderStatic() {
@@ -1048,18 +1122,37 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
     $('parent-text').textContent = p.parentText;
     $('pin-row').hidden = !p.usePin;
 
-    p.grades.forEach((g) => {
-      $('f-grade').appendChild(new Option(g, g));
-      $('l-grade').appendChild(new Option(g, g));
+    // 학년 목록(다시 그려도 고른 값은 유지)
+    ['f-grade', 'l-grade'].forEach((id) => {
+      const sel = $(id), keep = sel.value;
+      sel.textContent = '';
+      sel.appendChild(new Option('학년을 골라 주세요', ''));
+      p.grades.forEach((g) => sel.appendChild(new Option(g, g)));
+      sel.value = p.grades.includes(keep) ? keep : '';
     });
+    $('parent-consent').hidden = !(grade() && p.parentGrades.includes(grade()));
+    renderPeriod();
+  }
 
+  // 신청 기간: 이 기기 시각으로 계산하고, 시작·마감 시각이 되면 화면을 저절로 바꿈(새로 고침 없이)
+  const kst = (s) => (s ? new Date(s.replace(' ', 'T') + ':00+09:00') : null);
+  let periodTimer = null;
+  function renderPeriod() {
+    const p = state.pub;
+    const now = Date.now(), openAt = kst(p.period.openAt), closeAt = kst(p.period.closeAt);
+    const st = openAt && now < openAt ? 'before' : closeAt && now > closeAt ? 'after' : 'open';
     const banner = $('period-banner');
-    const closed = p.period.state !== 'open';
-    banner.hidden = !closed;
-    if (p.period.state === 'before') banner.textContent = '아직 신청 기간이 아닙니다. (시작 ' + p.period.openAt + ')';
-    if (p.period.state === 'after') banner.textContent = '신청 기간이 끝났습니다.';
-    $('submit').disabled = closed;
-    $('start').disabled = closed;
+    banner.hidden = st === 'open';
+    if (st === 'before') banner.textContent = '아직 신청 기간이 아닙니다. (시작 ' + p.period.openAt + ')';
+    if (st === 'after') banner.textContent = '신청 기간이 끝났습니다.';
+    $('submit').disabled = st !== 'open';
+    $('start').disabled = st !== 'open';
+    clearTimeout(periodTimer);
+    const next = st === 'before' ? openAt : st === 'open' && closeAt ? closeAt : null;
+    if (next && next - now < 86400000) {
+      // 시작 순간에는 최신 강의 상태도 함께 받아 옴
+      periodTimer = setTimeout(() => (st === 'before' ? refreshPublic().catch(renderPeriod) : renderPeriod()), next - now + 300);
+    }
   }
 
   function initForm() {
@@ -1080,6 +1173,7 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
       setTab('lookup');
       if (prefillLookup(true)) doLookup();
     });
+    $('go-home').addEventListener('click', goHome);
   }
 
   async function start() {
@@ -1088,20 +1182,30 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
     initForm();
     initLookup();
     const conn = $('conn');
+    const shown = () => { $('loading').hidden = true; setTab($('panel-lookup').hidden ? 'apply' : 'lookup'); };
+
+    // 1) 지난번 정보가 있으면 바로 화면을 띄움(서버 응답을 기다리지 않음)
+    const cached = readCache();
+    if (cached) {
+      applyPublic(cached);
+      shown();
+      conn.dataset.state = 'wait';
+      conn.textContent = '최신 정보 확인 중…';
+    }
+    // 2) 서버에서 최신 정보를 받아 바꿔 그림
     try {
-      await loadPublic();
-      renderStatic();
-      renderPicked();
+      await refreshPublic();
+      if (!cached) shown();
       conn.dataset.state = 'ok';
       conn.textContent = '서버 연결됨';
-      $('loading').hidden = true;
-      setTab('apply');
     } catch (err) {
-      $('loading').hidden = true;
-      $('load-error').textContent = err.message + '\n잠시 뒤 새로 고침해 주세요. 계속 안 되면 학원으로 연락해 주세요.';
-      $('load-error').hidden = false;
       conn.dataset.state = 'fail';
       conn.textContent = '서버에 연결하지 못했습니다.';
+      if (!cached) {
+        $('loading').hidden = true;
+        $('load-error').textContent = err.message + '\n잠시 뒤 새로 고침해 주세요. 계속 안 되면 학원으로 연락해 주세요.';
+        $('load-error').hidden = false;
+      }
     }
   }
 
