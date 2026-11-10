@@ -1,6 +1,6 @@
 // SUGANG 서비스 워커 — 판마다 캐시 이름이 바뀜(build-pwa.js가 아래 CACHE의 판 번호 자리를 채움)
 // 같은 주소의 GET만 「네트워크 먼저, 안 되면 캐시」 → 새 판이 바로 반영됨. 구글 서버 요청은 건드리지 않음.
-const CACHE = 'sugang-app-b5216c8c9e';
+const CACHE = 'sugang-app-60fc367ad6';
 const FILES = ['./', './index.html', './banner.png', './manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {
@@ -18,8 +18,10 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  // 브라우저 자체 기억(GitHub은 10분)도 건너뛰고 서버에 새 파일이 있는지 꼭 물어봄 → 올리면 바로 새 화면
+  const fresh = req.mode === 'navigate' ? new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' }) : new Request(req, { cache: 'no-cache' });
   e.respondWith(
-    fetch(req)
+    fetch(fresh)
       .then((res) => {
         if (res.ok) {
           const copy = res.clone();
