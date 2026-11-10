@@ -1,0 +1,1114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>알파학원 2027 수강신청</title>
+  <meta name="description" content="알파학원 2027 수강신청 — 강의를 고르고 신청하거나, 내 신청을 조회·취소합니다.">
+  <meta name="theme-color" content="#000000">
+  <style>
+/* SUGANG — 색은 모두 여기서만 정한다 (SPEC 2장, 배너 이미지에서 잰 값) */
+:root {
+  --brand: #ED1C24;        /* 배너 빨강 — 선택·테두리·강조 */
+  --brand-dark: #CB171E;   /* 버튼 바탕(흰 글자 대비) */
+  --brand-darker: #A51318; /* 눌림 */
+  --brand-bg: #000000;     /* 머리 띠·배너 바탕·상태줄 */
+  --brand-soft: #FDE8E9;   /* 옅은 강조 바탕 */
+
+  --bg: #F5F5F6;
+  --surface: #FFFFFF;
+  --surface-2: #FAFAFA;
+  --text: #1C1C1E;
+  --muted: #66666B;
+  --border: #E1E1E5;
+  --ok: #1E7D46;
+  --ok-soft: #E4F4EA;
+  --warn: #8A5300;
+  --warn-soft: #FFF2DD;
+  --info: #1A56DB;
+  --info-soft: #E8EFFD;
+
+  --radius: 12px;
+  --gap: 16px;
+  --max: 720px;
+  --font: system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.55 var(--font);
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+[hidden] { display: none !important; }
+[tabindex="-1"]:focus { outline: none; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+a { color: inherit; }
+
+/* 머리 띠 + 배너 */
+.top { background: var(--brand-bg); padding: env(safe-area-inset-top) 0 0; }
+.top-title { margin: 0; line-height: 0; }
+.banner { display: block; width: 100%; max-width: var(--max); height: auto; margin: 0 auto; }
+
+/* 탭 */
+.tabs {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; justify-content: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  flex: 1 1 0; max-width: calc(var(--max) / 2);
+  padding: 14px 8px 12px;
+  border: 0; border-bottom: 3px solid transparent;
+  background: none; color: var(--muted);
+  font: inherit; font-weight: 600; cursor: pointer;
+}
+.tab.is-active { color: var(--text); border-bottom-color: var(--brand); }
+.tab:focus-visible { outline: 2px solid var(--brand); outline-offset: -4px; }
+
+/* 본문 */
+.wrap { flex: 1; width: 100%; max-width: var(--max); margin: 0 auto; padding: var(--gap); }
+.panel { display: grid; gap: var(--gap); }
+.loading { text-align: center; color: var(--muted); padding: 40px 0; }
+
+.card {
+  margin: 0; min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--gap);
+  display: grid; gap: 14px;
+}
+.card-title { margin: 0; padding: 0; font-size: 1.05rem; font-weight: 700; }
+/* fieldset은 grid가 잘 안 먹어서 블록 + 간격으로 (legend는 float로 상자 안에) */
+fieldset.card { display: block; }
+fieldset.card > legend { float: left; width: 100%; padding-bottom: 12px; }
+/* 위에 붙는 탭(약 52px)에 가려지지 않게 */
+.guide, .result, .card { scroll-margin-top: 64px; }
+fieldset.card > legend + * { clear: both; }
+fieldset.card > * + * { margin-top: 14px; }
+
+.alert { margin: 0; padding: 12px 14px; border-radius: 10px; white-space: pre-line; }
+.alert-error { background: var(--brand-soft); color: #8F0F14; }
+.alert-warn { background: var(--warn-soft); color: var(--warn); font-weight: 600; }
+.alert ul { margin: 0; padding-left: 1.2em; }
+
+/* 안내문 */
+.guide { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.guide-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; padding: 14px var(--gap);
+  border: 0; background: none; color: var(--text);
+  font: inherit; font-weight: 700; font-size: 1.05rem; text-align: left; cursor: pointer;
+}
+.guide-head:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; border-radius: var(--radius); }
+.chev { width: 10px; height: 10px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-135deg) translate(-2px, -2px); transition: transform .2s; flex: none; }
+.guide-head[aria-expanded="false"] .chev { transform: rotate(45deg) translate(-2px, -2px); }
+.guide-body { display: grid; gap: 14px; padding: 0 var(--gap) var(--gap); }
+.guide-box { background: var(--surface-2); border-radius: 10px; padding: 14px 16px; display: grid; gap: 12px; }
+.guide-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.guide-lines li { display: flex; gap: 8px; }
+.guide-lines li::before { content: "📌"; flex: none; }
+.guide-call { display: grid; gap: 2px; }
+.guide-phone { font-weight: 700; font-size: 1.1rem; text-decoration: none; width: fit-content; }
+.guide-hours { list-style: none; margin: 0; padding: 0 0 0 4px; font-size: .9rem; font-weight: 600; color: #333; }
+.guide-footer { margin: 0; font-weight: 700; display: flex; gap: 8px; }
+.guide-links { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.guide-links:has(> a:only-of-type:not([hidden])), .guide-links.single { grid-template-columns: 1fr; }
+
+/* 입력칸 */
+.field { display: grid; gap: 6px; }
+.field-label { font-weight: 600; font-size: .95rem; }
+.input {
+  width: 100%; min-height: 48px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--text); font: inherit;
+}
+.input:focus { outline: 2px solid var(--brand); outline-offset: 0; border-color: var(--brand); }
+.input:disabled { background: var(--surface-2); color: var(--muted); }
+.input[aria-invalid="true"] { border-color: var(--brand); background: #FFF8F8; }
+.hint { margin: 0; color: var(--muted); font-size: .88rem; }
+.pin-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pin-row .pin-hint { grid-column: 1 / -1; }
+
+/* 버튼 */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 48px; padding: 10px 18px;
+  border: 1px solid var(--brand-dark); border-radius: 10px;
+  background: var(--brand-dark); color: #fff;
+  font: inherit; font-weight: 700; text-decoration: none; cursor: pointer;
+}
+.btn:active { background: var(--brand-darker); }
+.btn:focus-visible { outline: 3px solid #000; outline-offset: 2px; }
+.btn:disabled { background: var(--border); border-color: var(--border); color: var(--muted); cursor: default; }
+.btn-outline { background: var(--surface); color: var(--brand-dark); }
+.btn-outline:active { background: var(--brand-soft); }
+.btn-block { width: 100%; }
+.btn-lg { min-height: 54px; font-size: 1.05rem; }
+
+/* 강의 카드 */
+.course-list { display: grid; gap: 10px; }
+.empty { margin: 0; padding: 20px 8px; text-align: center; color: var(--muted); }
+.empty.small { padding: 4px 0; text-align: left; font-size: .9rem; }
+.course {
+  position: relative; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px;
+  padding: 14px; border: 1.5px solid var(--border); border-radius: 12px;
+  background: var(--surface); cursor: pointer;
+}
+.course input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--brand); grid-row: span 3; }
+.course:has(input:checked) { border-color: var(--brand); background: #FFFBFB; }
+.course:has(input:focus-visible) { outline: 2px solid var(--brand); outline-offset: 2px; }
+.course.is-closed { cursor: default; background: var(--surface-2); color: var(--muted); }
+.course-name { font-weight: 700; }
+.course-meta { font-size: .9rem; color: var(--muted); }
+.course-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .8rem; font-weight: 700; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+.tag-ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+.tag-wait { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.tag-closed { background: #EDEDEF; color: #55555A; border-color: transparent; }
+
+/* 고른 강의 */
+.picked .count { display: inline-block; min-width: 1.6em; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: var(--brand-dark); color: #fff; font-size: .85rem; text-align: center; }
+.picked-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.picked-list li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); }
+.picked-list .info { flex: 1; font-size: .92rem; }
+.remove { flex: none; min-width: 44px; min-height: 36px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--muted); font: inherit; font-size: .85rem; cursor: pointer; }
+
+/* 동의 */
+.consent { display: grid; gap: 6px; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-weight: 600; cursor: pointer; }
+.check input { width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--brand); flex: none; }
+.consent-text summary { cursor: pointer; color: var(--muted); font-size: .9rem; padding-left: 32px; }
+.consent-text pre { margin: 8px 0 0; padding: 12px; background: var(--surface-2); border-radius: 8px; white-space: pre-wrap; font: .88rem/1.6 var(--font); }
+
+/* 결과 */
+.result-who { margin: 0; font-weight: 600; }
+.result-list, .dialog-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.line { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); }
+.line .icon { grid-row: span 2; font-size: 1.1rem; line-height: 1.4; }
+.line .info { font-weight: 600; }
+.line .msg { font-size: .92rem; white-space: pre-line; }
+.line.is-wait { background: var(--warn-soft); }
+.line.is-wait .msg { color: var(--warn); }
+.line.is-ok .msg { color: var(--ok); font-weight: 600; }
+.line.is-muted { color: var(--muted); }
+.result-actions { display: grid; gap: 10px; }
+.alert-ok { background: var(--ok-soft); color: var(--ok); font-weight: 600; }
+
+/* 내 신청 목록 */
+.my-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.my { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; }
+.my-info { font-weight: 700; }
+.my-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: .88rem; color: var(--muted); }
+.my-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: .9rem; }
+.my-foot .btn { min-height: 40px; padding: 6px 16px; }
+.my-warn { color: var(--warn); font-weight: 600; }
+.my-warn a { white-space: nowrap; }
+.my.is-cancelled { background: var(--surface-2); color: var(--muted); }
+.my.is-cancelled .my-info { font-weight: 600; text-decoration: line-through; text-decoration-color: #B0B0B5; }
+.tag-cancel { background: #EDEDEF; color: #6B6B70; border-color: transparent; }
+
+/* 확인 창 */
+.dialog {
+  width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 24px);
+  padding: 0; border: 0; border-radius: 16px;
+  background: var(--surface); color: var(--text);
+  box-shadow: 0 20px 60px rgba(0,0,0,.25);
+}
+.dialog::backdrop { background: rgba(0,0,0,.45); }
+.dialog-inner { display: grid; gap: 14px; padding: 20px; }
+.dialog-title { margin: 0; font-size: 1.15rem; }
+.dialog-who { margin: 0; color: var(--muted); font-weight: 600; }
+.dialog-body { display: grid; gap: 12px; }
+.note { margin: 0; padding: 10px 12px; border-radius: 10px; white-space: pre-line; font-size: .92rem; }
+.note-info { background: var(--info-soft); color: #173E9C; }
+.note-error { background: var(--brand-soft); color: #8F0F14; font-weight: 600; }
+.note-small { padding: 0; color: var(--muted); font-size: .85rem; }
+.dialog-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+#cancel-dlg .line { grid-template-columns: 1fr; }
+.dialog-actions.single { grid-template-columns: 1fr; }
+
+/* 아래 띠 */
+.foot { padding: 12px var(--gap) calc(12px + env(safe-area-inset-bottom)); text-align: center; font-size: .8rem; color: var(--muted); }
+.conn[data-state="ok"]::before { content: "● "; color: var(--ok); }
+.conn[data-state="fail"]::before { content: "● "; color: var(--brand); }
+.conn[data-state="wait"]::before { content: "● "; color: var(--border); }
+
+@media (max-width: 380px) {
+  .pin-row { grid-template-columns: 1fr; }
+  .guide-links { grid-template-columns: 1fr; }
+}
+@media (min-width: 769px) {
+  body { font-size: 17px; }
+  .wrap { padding: 24px var(--gap); }
+}
+@media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
+</style>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="canonical" href="https://spec-jk.github.io/Alpha/">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="알파 수강신청">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="알파학원">
+  <meta property="og:title" content="알파학원 2027 수강신청">
+  <meta property="og:description" content="알파학원 2027 수강신청 — 강의를 고르고 신청하거나, 내 신청을 조회·취소합니다.">
+  <meta property="og:url" content="https://spec-jk.github.io/Alpha/">
+  <meta property="og:image" content="https://spec-jk.github.io/Alpha/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="ko_KR">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://spec-jk.github.io/Alpha/og-image.png">
+</head>
+<body>
+  <header class="top">
+    <h1 class="top-title">
+      <img class="banner" src="banner.png" alt="알파학원 2027 수강신청" width="1120" height="217">
+    </h1>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="화면 고르기">
+    <button class="tab is-active" role="tab" id="tab-apply" aria-controls="panel-apply" aria-selected="true" data-tab="apply">강의 신청</button>
+    <button class="tab" role="tab" id="tab-lookup" aria-controls="panel-lookup" aria-selected="false" data-tab="lookup" tabindex="-1">내 신청 조회·취소</button>
+  </nav>
+
+  <main class="wrap">
+    <p class="loading" id="loading">불러오는 중…</p>
+    <p class="alert alert-error" id="load-error" hidden></p>
+
+    <!-- ───────── 강의 신청 ───────── -->
+    <section class="panel" id="panel-apply" role="tabpanel" aria-labelledby="tab-apply" hidden>
+      <p class="alert alert-warn" id="period-banner" hidden></p>
+
+      <!-- 안내문 (설정 시트에서 고침) -->
+      <section class="guide" id="guide" hidden>
+        <button type="button" class="guide-head" id="guide-head" aria-expanded="true" aria-controls="guide-body">
+          <span class="guide-title"><span aria-hidden="true">📋</span> <span id="guide-title"></span></span>
+          <span class="chev" aria-hidden="true"></span>
+        </button>
+        <div class="guide-body" id="guide-body">
+          <div class="guide-box">
+            <ul class="guide-lines" id="guide-lines"></ul>
+            <div class="guide-call" id="guide-call" hidden>
+              <a class="guide-phone" id="guide-phone"><span aria-hidden="true">📞</span> <span id="guide-phone-text"></span></a>
+              <ul class="guide-hours" id="guide-hours"></ul>
+            </div>
+          </div>
+          <p class="guide-footer" id="guide-footer" hidden><span aria-hidden="true">📌</span> <span id="guide-footer-text"></span></p>
+          <div class="guide-links" id="guide-links" hidden>
+            <a class="btn btn-outline" id="link-consult" target="_blank" rel="noopener" hidden>상담신청 바로가기</a>
+            <a class="btn btn-outline" id="link-home" target="_blank" rel="noopener" hidden>홈페이지 바로가기</a>
+          </div>
+          <button type="button" class="btn btn-block" id="start">수강신청 시작하기</button>
+        </div>
+      </section>
+
+      <form class="apply-form" id="apply-form" novalidate>
+        <!-- 봇 걸러내기: 사람에게는 안 보이는 칸. 값이 들어오면 서버가 거절 -->
+        <div class="hp" aria-hidden="true">
+          <label>홈페이지 <input id="f-hp" name="website" tabindex="-1" autocomplete="off"></label>
+        </div>
+        <!-- 1. 학생 정보 -->
+        <fieldset class="card">
+          <legend class="card-title">학생 정보</legend>
+          <label class="field">
+            <span class="field-label">학생이름</span>
+            <input class="input" id="f-name" name="name" autocomplete="off" maxlength="20" required>
+          </label>
+          <label class="field">
+            <span class="field-label">학교이름</span>
+            <input class="input" id="f-school" name="school" autocomplete="off" maxlength="30" required>
+          </label>
+          <label class="field">
+            <span class="field-label">학년</span>
+            <select class="input" id="f-grade" name="grade" required>
+              <option value="">학년을 골라 주세요</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">학생 연락처</span>
+            <input class="input" id="f-phone" name="phone" type="tel" inputmode="numeric" autocomplete="off" placeholder="010-0000-0000" maxlength="13" required>
+            <span class="hint">학생 연락처가 없으면 학부모 연락처와 똑같이 입력해 주세요.</span>
+          </label>
+          <label class="field">
+            <span class="field-label">학부모 연락처</span>
+            <input class="input" id="f-parent" name="parentPhone" type="tel" inputmode="numeric" autocomplete="off" placeholder="010-0000-0000" maxlength="13" required>
+          </label>
+          <div class="pin-row" id="pin-row">
+            <label class="field">
+              <span class="field-label">비밀번호 (숫자 4자리)</span>
+              <input class="input" id="f-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="4" pattern="\d{4}">
+            </label>
+            <label class="field">
+              <span class="field-label">비밀번호 확인</span>
+              <input class="input" id="f-pin2" type="password" inputmode="numeric" autocomplete="off" maxlength="4" pattern="\d{4}">
+            </label>
+            <p class="hint pin-hint">신청 취소·추가 신청할 때 필요합니다. 이미 신청한 적이 있으면 처음 정한 비밀번호를 입력해 주세요.</p>
+          </div>
+        </fieldset>
+
+        <!-- 2. 과목·강의 고르기 -->
+        <fieldset class="card">
+          <legend class="card-title">강의 고르기</legend>
+          <label class="field">
+            <span class="field-label">과목</span>
+            <select class="input" id="f-subject" disabled>
+              <option value="">학년을 먼저 골라 주세요</option>
+            </select>
+          </label>
+          <div class="course-list" id="course-list"></div>
+        </fieldset>
+
+        <section class="card picked" id="picked" aria-live="polite">
+          <h2 class="card-title">고른 강의 <span class="count" id="picked-count">0</span></h2>
+          <p class="empty small" id="picked-empty">아직 고른 강의가 없습니다. 과목을 바꿔 가며 여러 강의를 고를 수 있습니다.</p>
+          <ul class="picked-list" id="picked-list"></ul>
+          <p class="hint" id="picked-note" hidden></p>
+        </section>
+
+        <!-- 3. 동의 -->
+        <fieldset class="card">
+          <legend class="card-title">동의</legend>
+          <div class="consent">
+            <label class="check"><input type="checkbox" id="f-privacy"> <span>[필수] 개인정보 수집·이용에 동의합니다.</span></label>
+            <details class="consent-text"><summary>내용 보기</summary><pre id="privacy-text"></pre></details>
+          </div>
+          <div class="consent" id="parent-consent" hidden>
+            <label class="check"><input type="checkbox" id="f-parent-consent"> <span>[필수] 학부모(법정대리인)로서 동의합니다.</span></label>
+            <details class="consent-text"><summary>내용 보기</summary><pre id="parent-text"></pre></details>
+          </div>
+        </fieldset>
+
+        <div class="alert alert-error" id="form-error" role="alert" hidden></div>
+        <button type="submit" class="btn btn-block btn-lg" id="submit">신청하기</button>
+      </form>
+
+      <!-- 신청 결과 -->
+      <section class="card result" id="result" hidden tabindex="-1">
+        <h2 class="card-title">신청 결과</h2>
+        <p class="result-who" id="result-who"></p>
+        <ul class="result-list" id="result-list"></ul>
+        <div class="result-actions">
+          <button type="button" class="btn btn-block" id="more">다른 강의 더 신청하기</button>
+          <button type="button" class="btn btn-outline btn-block" id="go-lookup">내 신청 확인하기</button>
+        </div>
+      </section>
+    </section>
+
+    <!-- ───────── 내 신청 조회·취소 ───────── -->
+    <section class="panel" id="panel-lookup" role="tabpanel" aria-labelledby="tab-lookup" hidden>
+      <form class="card" id="lookup-form" novalidate>
+        <h2 class="card-title">내 신청 조회</h2>
+        <p class="hint">신청할 때 입력한 학생이름 · 학년 · 학부모 연락처를 입력해 주세요.</p>
+        <label class="field">
+          <span class="field-label">학생이름</span>
+          <input class="input" id="l-name" autocomplete="off" maxlength="20">
+        </label>
+        <label class="field">
+          <span class="field-label">학년</span>
+          <select class="input" id="l-grade">
+            <option value="">학년을 골라 주세요</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-label">학부모 연락처</span>
+          <input class="input" id="l-parent" type="tel" inputmode="numeric" autocomplete="off" placeholder="010-0000-0000" maxlength="13">
+        </label>
+        <div class="alert alert-error" id="lookup-error" role="alert" hidden></div>
+        <button type="submit" class="btn btn-block" id="lookup-submit">조회하기</button>
+      </form>
+
+      <section class="card" id="lookup-result" hidden tabindex="-1" aria-live="polite">
+        <h2 class="card-title" id="lookup-who"></h2>
+        <p class="alert alert-ok" id="lookup-done" hidden></p>
+        <p class="empty" id="lookup-empty" hidden></p>
+        <ul class="my-list" id="lookup-list"></ul>
+      </section>
+    </section>
+  </main>
+
+  <!-- 신청 전 확인 창 (문구는 설정 시트 「확인창 …」) -->
+  <dialog class="dialog" id="confirm" aria-labelledby="confirm-title">
+    <form method="dialog" class="dialog-inner">
+      <h2 class="dialog-title" id="confirm-title"></h2>
+      <p class="dialog-who" id="confirm-who"></p>
+      <div class="dialog-body" id="confirm-body"></div>
+      <div class="dialog-actions">
+        <button class="btn btn-outline" value="back" id="confirm-back"></button>
+        <button class="btn" value="apply" id="confirm-apply"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 취소 확인 창 (문구는 설정 시트 「취소창 …」) -->
+  <dialog class="dialog" id="cancel-dlg" aria-labelledby="cancel-title">
+    <form method="dialog" class="dialog-inner" id="cancel-form">
+      <h2 class="dialog-title" id="cancel-title"></h2>
+      <p class="dialog-who" id="cancel-who"></p>
+      <div class="line">
+        <span class="info" id="cancel-info"></span>
+        <span class="msg" id="cancel-status"></span>
+      </div>
+      <p class="note note-error" id="cancel-note"></p>
+      <label class="field" id="cancel-pin-field">
+        <span class="field-label">비밀번호 (숫자 4자리)</span>
+        <input class="input" id="cancel-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="4">
+      </label>
+      <p class="alert alert-error" id="cancel-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button class="btn btn-outline" type="button" id="cancel-back"></button>
+        <button class="btn" type="submit" id="cancel-go"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <footer class="foot">
+    <span id="conn" class="conn" data-state="wait">서버 확인 중…</span>
+  </footer>
+
+  <script>
+window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf5m9skUUnYj5Om3rG_K9sZvHfKOnAbKwVzNAxuquQ6uu80VL31S24iA/exec";
+// SUGANG — 서버(구글 웹앱) 부르기. 화면(app.js)은 SugangAPI.call(path, data)만 안다.
+// 시험: config.js가 window.SUGANG_API_URL = 흉내 서버 주소
+// 배포: build-pwa.js가 config.js 자리에 진짜 웹앱 주소를 넣는다.
+(function () {
+  'use strict';
+
+  const RETRY_WAITS = [1000, 2000, 4000]; // 503(서버가 바쁨)일 때만 다시 시도 — 503은 저장되지 않았다는 뜻
+
+  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+  async function once(req) {
+    const url = window.SUGANG_API_URL;
+    if (!url) throw Object.assign(new Error('서버 주소가 설정되지 않았습니다.'), { status: 0 });
+    // text/plain → 브라우저가 사전 확인(OPTIONS)을 보내지 않음 (구글 웹앱은 OPTIONS를 받지 못함)
+    const r = await fetch(url, {
+      method: 'POST',
+      redirect: 'follow',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(req),
+    });
+    if (!r.ok) throw Object.assign(new Error('서버 응답 오류 (' + r.status + ')'), { status: r.status });
+    return r.json(); // {status, body}
+  }
+
+  async function call(path, data) {
+    const req = Object.assign({}, data || {}, { path: path });
+    let last;
+    for (let i = 0; i <= RETRY_WAITS.length; i++) {
+      try {
+        last = await once(req);
+      } catch (e) {
+        // 연결 자체가 안 됨: 저장됐는지 알 수 없으므로 다시 보내지 않고 알린다
+        return { status: 0, body: { error: '서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.' } };
+      }
+      if (last.status !== 503 || i === RETRY_WAITS.length) return last;
+      await sleep(RETRY_WAITS[i] + Math.floor(Math.random() * 400));
+    }
+    return last;
+  }
+
+  window.SugangAPI = { call: call };
+})();
+
+// SUGANG — 신청자 화면 (SPEC 4장)
+// 화면 글은 모두 textContent로 넣는다(시트에 적힌 글이 HTML로 해석되지 않게).
+(function () {
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+  const api = (path, data) => window.SugangAPI.call(path, data);
+
+  const state = {
+    pub: null,            // /api/public 응답
+    picked: new Map(),    // 고른 강의 id → 강의
+    lastStudent: null,    // 마지막으로 신청한 학생(조회 탭 미리 채우기용, 이 화면 안에서만)
+  };
+
+  // ── 작은 도구 ──────────────────────────────────────
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  const digits = (s) => String(s || '').replace(/\D/g, '');
+  function fmtPhone(s) {
+    const d = digits(s).slice(0, 11);
+    if (d.length < 4) return d;
+    if (d.length < 8) return d.slice(0, 3) + '-' + d.slice(3);
+    if (d.length === 10) return d.slice(0, 3) + '-' + d.slice(3, 6) + '-' + d.slice(6);
+    return d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7);
+  }
+  const isMobile = (s) => /^01[016789]\d{7,8}$/.test(digits(s));
+  const fill = (tpl, vars) => String(tpl || '').replace(/\{(대기순번|남은자리|현재상태)\}/g, (m, k) => (k in vars ? vars[k] : m));
+  function fmtDate(ymd) {
+    if (!ymd) return '';
+    const [y, m, d] = ymd.split('-').map(Number);
+    const w = '일월화수목금토'[new Date(y, m - 1, d).getDay()];
+    return m + '월 ' + d + '일(' + w + ')';
+  }
+
+  // ── 탭 ────────────────────────────────────────────
+  function setTab(name) {
+    document.querySelectorAll('.tab').forEach((t) => {
+      const on = t.dataset.tab === name;
+      t.classList.toggle('is-active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
+    });
+    // 패널은 숨기기만 한다 → 적던 값이 그대로 남음 (SPEC 4-0)
+    $('panel-apply').hidden = name !== 'apply' || !state.pub;
+    $('panel-lookup').hidden = name !== 'lookup';
+  }
+  function initTabs() {
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => setTab(t.dataset.tab));
+      t.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+        setTab(next.dataset.tab);
+        next.focus();
+      });
+    });
+  }
+
+  // ── 안내문 ────────────────────────────────────────
+  function renderGuide(g) {
+    const has = g && (g.lines.length || g.phone || g.footer || g.consultUrl || g.homeUrl);
+    $('guide-title').textContent = g.title || '수강신청 방법 안내';
+    const ul = $('guide-lines');
+    ul.textContent = '';
+    g.lines.forEach((l) => ul.appendChild(el('li', '', l)));
+    ul.hidden = !g.lines.length;
+
+    $('guide-call').hidden = !g.phone;
+    $('guide-phone-text').textContent = g.phone;
+    $('guide-phone').href = 'tel:' + digits(g.phone);
+    const hours = $('guide-hours');
+    hours.textContent = '';
+    g.hours.forEach((h) => hours.appendChild(el('li', '', h)));
+    $('guide-footer').hidden = !g.footer;
+    $('guide-footer-text').textContent = g.footer;
+
+    $('link-consult').hidden = !g.consultUrl;
+    if (g.consultUrl) $('link-consult').href = g.consultUrl;
+    $('link-home').hidden = !g.homeUrl;
+    if (g.homeUrl) $('link-home').href = g.homeUrl;
+    $('guide-links').hidden = !g.consultUrl && !g.homeUrl;
+    $('guide-links').classList.toggle('single', !(g.consultUrl && g.homeUrl));
+    $('guide').hidden = !has;
+  }
+  function setGuideOpen(open) {
+    $('guide-head').setAttribute('aria-expanded', open ? 'true' : 'false');
+    $('guide-body').hidden = !open;
+  }
+  function initGuide() {
+    $('guide-head').addEventListener('click', () => setGuideOpen($('guide-body').hidden));
+    $('start').addEventListener('click', () => {
+      setGuideOpen(false);
+      $('guide').scrollIntoView({ block: 'start', behavior: 'smooth' });
+      setTimeout(() => $('f-name').focus({ preventScroll: true }), 250);
+    });
+  }
+
+  // ── 학년 → 과목 → 강의 ─────────────────────────────
+  const grade = () => $('f-grade').value;
+  const coursesOf = (g) => state.pub.courses.filter((c) => c.grades.includes(g));
+
+  function renderSubjects() {
+    const sel = $('f-subject');
+    const keep = sel.value;
+    sel.textContent = '';
+    const g = grade();
+    if (!g) {
+      sel.appendChild(new Option('학년을 먼저 골라 주세요', ''));
+      sel.disabled = true;
+      renderCourses();
+      return;
+    }
+    const subjects = [];
+    coursesOf(g).forEach((c) => { if (!subjects.includes(c.subject)) subjects.push(c.subject); });
+    sel.disabled = !subjects.length;
+    sel.appendChild(new Option(subjects.length ? '과목을 골라 주세요' : g + ' 강의가 아직 없습니다', ''));
+    subjects.forEach((s) => sel.appendChild(new Option(s, s)));
+    sel.value = subjects.includes(keep) ? keep : '';
+    renderCourses();
+  }
+
+  function courseTag(c) {
+    if (c.closed) return el('span', 'tag tag-closed', '마감');
+    if (c.remaining > 0) return el('span', 'tag tag-ok', '남은 자리 ' + c.remaining);
+    return el('span', 'tag tag-wait', '정원 마감 · 대기 ' + c.waiting + '명');
+  }
+
+  function renderCourses() {
+    const box = $('course-list');
+    box.textContent = '';
+    const g = grade(), s = $('f-subject').value;
+    if (!g || !s) {
+      box.appendChild(el('p', 'empty', !g ? '학생 정보에서 학년을 고르면 과목이 나옵니다.' : '과목을 고르면 강의가 나옵니다.'));
+      return;
+    }
+    coursesOf(g).filter((c) => c.subject === s).forEach((c) => {
+      const label = el('label', 'course' + (c.closed ? ' is-closed' : ''));
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = state.picked.has(c.id);
+      cb.disabled = c.closed;
+      cb.addEventListener('change', () => {
+        if (cb.checked) state.picked.set(c.id, c); else state.picked.delete(c.id);
+        renderPicked();
+      });
+      label.appendChild(cb);
+      label.appendChild(el('span', 'course-name', c.name));
+      label.appendChild(el('span', 'course-meta', [c.time, c.teacher].filter(Boolean).join(' · ')));
+      const tags = el('span', 'course-tags');
+      tags.appendChild(courseTag(c));
+      if (c.start) tags.appendChild(el('span', 'tag', '개강 ' + fmtDate(c.start)));
+      tags.appendChild(el('span', 'tag', '정원 ' + c.capacity + '명'));
+      if (c.grades.length > 1) tags.appendChild(el('span', 'tag', c.grades.join('·')));
+      label.appendChild(tags);
+      box.appendChild(label);
+    });
+  }
+
+  function renderPicked() {
+    const list = $('picked-list');
+    list.textContent = '';
+    state.picked.forEach((c, id) => {
+      const li = el('li');
+      li.appendChild(el('span', 'info', c.info));
+      const rm = el('button', 'remove', '빼기');
+      rm.type = 'button';
+      rm.setAttribute('aria-label', c.info + ' 빼기');
+      rm.addEventListener('click', () => { state.picked.delete(id); renderPicked(); renderCourses(); });
+      li.appendChild(rm);
+      list.appendChild(li);
+    });
+    $('picked-count').textContent = state.picked.size;
+    $('picked-empty').hidden = state.picked.size > 0;
+  }
+
+  function onGradeChange() {
+    // 학년이 바뀌면 그 학년이 들을 수 없는 강의는 고른 목록에서 뺀다
+    const g = grade();
+    const removed = [];
+    state.picked.forEach((c, id) => { if (!c.grades.includes(g)) { removed.push(c.info); state.picked.delete(id); } });
+    const note = $('picked-note');
+    note.hidden = !removed.length;
+    note.textContent = removed.length ? '학년이 바뀌어 고른 강의 ' + removed.length + '개를 뺐습니다.' : '';
+    $('parent-consent').hidden = !(g && state.pub.parentGrades.includes(g));
+    renderSubjects();
+    renderPicked();
+  }
+
+  // ── 신청서 읽기·검사 ───────────────────────────────
+  function readStudent() {
+    return {
+      name: $('f-name').value.trim(),
+      school: $('f-school').value.trim(),
+      grade: grade(),
+      phone: digits($('f-phone').value),
+      parentPhone: digits($('f-parent').value),
+      pin: state.pub.usePin ? $('f-pin').value.trim() : '',
+      privacy: $('f-privacy').checked,
+      parentConsent: !$('parent-consent').hidden && $('f-parent-consent').checked,
+      hp: $('f-hp').value,
+    };
+  }
+
+  function validate(st) {
+    const errs = [];
+    const mark = (id, bad) => $(id).setAttribute('aria-invalid', bad ? 'true' : 'false');
+    const need = (id, ok, msg) => { mark(id, !ok); if (!ok) errs.push({ id, msg }); };
+    need('f-name', !!st.name, '학생이름을 입력해 주세요.');
+    need('f-school', !!st.school, '학교이름을 입력해 주세요.');
+    need('f-grade', !!st.grade, '학년을 골라 주세요.');
+    need('f-phone', isMobile(st.phone), '학생 연락처를 휴대폰 번호로 입력해 주세요. (없으면 학부모 연락처)');
+    need('f-parent', isMobile(st.parentPhone), '학부모 연락처를 휴대폰 번호로 입력해 주세요.');
+    if (state.pub.usePin) {
+      need('f-pin', /^\d{4}$/.test(st.pin), '비밀번호를 숫자 4자리로 입력해 주세요.');
+      need('f-pin2', $('f-pin2').value === st.pin, '비밀번호 확인이 같지 않습니다.');
+    }
+    if (!state.picked.size) errs.push({ id: 'f-subject', msg: '신청할 강의를 골라 주세요.' });
+    need('f-privacy', st.privacy, '개인정보 수집·이용에 동의해 주세요.');
+    if (!$('parent-consent').hidden) need('f-parent-consent', st.parentConsent, '학부모(법정대리인) 동의가 필요합니다.');
+    return errs;
+  }
+
+  function showFormError(errs) {
+    const box = $('form-error');
+    box.textContent = '';
+    if (!errs.length) { box.hidden = true; return; }
+    if (typeof errs === 'string') box.textContent = errs;
+    else {
+      const ul = el('ul');
+      errs.forEach((e) => ul.appendChild(el('li', '', e.msg)));
+      box.appendChild(ul);
+    }
+    box.hidden = false;
+  }
+
+  // ── 확인 창 (SPEC 4-1, 문구는 설정 시트) ──────────────
+  function statusText(status, waitNo) {
+    return status === '대기' && waitNo ? '대기 ' + waitNo + '번' : status;
+  }
+
+  function lineFor(it, T) {
+    // 확인 창·결과 화면 공용 한 줄
+    let icon, msg, cls = '';
+    switch (it.kind) {
+      case 'ok': icon = '✅'; msg = fill(T.ok, { 남은자리: it.remaining }); cls = 'is-ok'; break;
+      case 'wait': icon = '⏳'; msg = fill(T.wait, { 대기순번: it.waitNo }); cls = 'is-wait'; break;
+      case 'already': icon = '✔️'; msg = fill(T.already, { 현재상태: statusText(it.status, it.waitNo) }); cls = 'is-muted'; break;
+      case 'closed': icon = '⛔'; msg = T.closed; cls = 'is-muted'; break;
+      default: icon = '⛔'; msg = T.unavailable; cls = 'is-muted';
+    }
+    const li = el('li', 'line ' + cls);
+    li.appendChild(el('span', 'icon', icon));
+    li.appendChild(el('span', 'info', it.info || '(없는 강의)'));
+    li.appendChild(el('span', 'msg', msg));
+    return li;
+  }
+
+  /** 확인 창을 띄우고 사용자가 [신청하기]를 누르면 true */
+  function askConfirm(st, plan) {
+    const T = state.pub.confirm;
+    $('confirm-title').textContent = T.title;
+    $('confirm-who').textContent = st.name + ' (' + st.grade + ')';
+    const body = $('confirm-body');
+    body.textContent = '';
+    if (plan.existing && !plan.pinOk) {
+      body.appendChild(el('p', 'note note-error', T.pinWrong));
+    } else {
+      if (plan.existing) body.appendChild(el('p', 'note note-info', T.existing));
+      const ul = el('ul', 'dialog-list');
+      plan.items.forEach((it) => ul.appendChild(lineFor(it, T)));
+      body.appendChild(ul);
+      if (plan.items.some((it) => it.kind === 'wait')) body.appendChild(el('p', 'note note-small', T.waitNote));
+    }
+    const canApply = !(plan.existing && !plan.pinOk) && plan.items.some((it) => it.kind === 'ok' || it.kind === 'wait');
+    $('confirm-back').textContent = T.backButton;
+    $('confirm-apply').textContent = T.applyButton;
+    $('confirm-apply').hidden = !canApply;
+    $('confirm').querySelector('.dialog-actions').classList.toggle('single', !canApply);
+
+    const dlg = $('confirm');
+    return new Promise((resolve) => {
+      dlg.addEventListener('close', () => resolve(dlg.returnValue === 'apply'), { once: true });
+      dlg.returnValue = '';
+      dlg.showModal();
+      (canApply ? $('confirm-apply') : $('confirm-back')).focus();
+    });
+  }
+
+  // ── 신청 ──────────────────────────────────────────
+  let busy = false;
+  async function onSubmit(e) {
+    e.preventDefault();
+    if (busy) return;
+    const st = readStudent();
+    const errs = validate(st);
+    showFormError(errs);
+    if (errs.length) { $(errs[0].id).focus(); return; }
+
+    const btn = $('submit');
+    busy = true; btn.disabled = true; btn.textContent = '확인 중…';
+    try {
+      const ids = Array.from(state.picked.keys());
+      const chk = await api('/api/check', { student: st, courseIds: ids });
+      if (chk.status !== 200) { showFormError(chk.body.error || '확인하지 못했습니다. 잠시 뒤 다시 눌러 주세요.'); return; }
+      if (!(await askConfirm(st, chk.body))) return;
+
+      btn.textContent = '신청 중…';
+      const res = await api('/api/apply', { student: st, courseIds: ids });
+      if (res.status !== 200) { showFormError(res.body.error || '신청하지 못했습니다. 잠시 뒤 다시 눌러 주세요.'); return; }
+      showResult(st, res.body);
+    } finally {
+      busy = false; btn.disabled = false; btn.textContent = '신청하기';
+    }
+  }
+
+  function showResult(st, body) {
+    const T = state.pub.confirm;
+    state.lastStudent = { name: st.name, grade: st.grade, parentPhone: st.parentPhone };
+    $('result-who').textContent = st.name + ' (' + st.grade + ')';
+    const ul = $('result-list');
+    ul.textContent = '';
+    body.results.forEach((r) => {
+      let li;
+      if (r.kind === 'added') {
+        const ok = r.status === '확정';
+        li = el('li', 'line ' + (ok ? 'is-ok' : 'is-wait'));
+        li.appendChild(el('span', 'icon', ok ? '✅' : '⏳'));
+        li.appendChild(el('span', 'info', r.info));
+        li.appendChild(el('span', 'msg', ok ? '신청 완료 — 확정' : '신청 완료 — 대기 ' + r.waitNo + '번'));
+      } else {
+        li = lineFor(r, T);
+      }
+      ul.appendChild(li);
+    });
+    $('apply-form').hidden = true;
+    $('result').hidden = false;
+    $('result').focus();
+    $('result').scrollIntoView({ block: 'start' });
+  }
+
+  async function onMore() {
+    // 학생 정보는 그대로 두고 강의만 다시 고르기 (같은 줄에 추가됨)
+    state.picked.clear();
+    await loadPublic();
+    $('f-privacy').checked = false;
+    $('f-parent-consent').checked = false;
+    renderPicked();
+    $('result').hidden = true;
+    $('apply-form').hidden = false;
+    $('f-subject').focus();
+  }
+
+  // ── 내 신청 조회·취소 (SPEC 4장 7번, 문구는 설정 시트) ─────────
+  const lk = { who: null, items: [] };
+
+  function readIdentity() {
+    return { name: $('l-name').value.trim(), grade: $('l-grade').value, parentPhone: digits($('l-parent').value) };
+  }
+  function prefillLookup(force) {
+    const s = state.lastStudent;
+    if (!s) return false;
+    if (!force && ($('l-name').value || $('l-parent').value)) return false;
+    $('l-name').value = s.name;
+    $('l-grade').value = s.grade;
+    $('l-parent').value = fmtPhone(s.parentPhone);
+    return true;
+  }
+  function lookupError(msg) {
+    $('lookup-error').textContent = msg || '';
+    $('lookup-error').hidden = !msg;
+  }
+
+  function myStatusTag(it) {
+    if (it.kind === 'ok') return el('span', 'tag tag-ok', '확정');
+    if (it.kind === 'wait') return el('span', 'tag tag-wait', '대기 ' + it.waitNo + '번');
+    if (it.kind === 'cancelled') return el('span', 'tag tag-cancel', '취소됨');
+    if (it.kind === 'gone') return el('span', 'tag tag-closed', '강의 변경');
+    return el('span', 'tag', '확인 중');
+  }
+  function fmtDeadline(ymd) { return fmtDate(ymd) + ' 23:59까지'; }
+
+  function renderLookup(body, doneMsg) {
+    const L = state.pub.lookup;
+    lk.items = body.items || [];
+    $('lookup-result').hidden = false;
+    $('lookup-who').textContent = lk.who.name + ' (' + lk.who.grade + ') 신청 내역';
+    $('lookup-done').hidden = !doneMsg;
+    $('lookup-done').textContent = doneMsg || '';
+    $('lookup-empty').hidden = !!body.found;
+    $('lookup-empty').textContent = body.found ? '' : L.notFound;
+    const ul = $('lookup-list');
+    ul.textContent = '';
+    lk.items.forEach((it) => {
+      const li = el('li', 'my' + (it.kind === 'cancelled' ? ' is-cancelled' : ''));
+      li.appendChild(el('span', 'my-info', it.info));
+      const meta = el('span', 'my-meta');
+      meta.appendChild(myStatusTag(it));
+      if (it.start) meta.appendChild(el('span', '', '개강 ' + fmtDate(it.start)));
+      li.appendChild(meta);
+      const foot = el('div', 'my-foot');
+      if (it.canCancel) {
+        foot.appendChild(el('span', '', '취소 가능: ' + fmtDeadline(it.deadline)));
+        const b = el('button', 'btn btn-outline', '취소');
+        b.type = 'button';
+        b.setAttribute('aria-label', it.info + ' 취소');
+        b.addEventListener('click', () => openCancel(it));
+        foot.appendChild(b);
+      } else if (it.expired || it.kind === 'gone') {
+        const w = el('span', 'my-warn', it.kind === 'gone' ? L.gone : L.expired);
+        const g = state.pub.guide;
+        if (g.phone) {
+          w.appendChild(document.createTextNode(' '));
+          const a = el('a', '', '📞 ' + g.phone);
+          a.href = 'tel:' + digits(g.phone);
+          w.appendChild(a);
+        }
+        foot.appendChild(w);
+      }
+      if (foot.childNodes.length) li.appendChild(foot);
+      ul.appendChild(li);
+    });
+  }
+
+  let lookupBusy = false;
+  async function doLookup(e) {
+    if (e) e.preventDefault();
+    if (lookupBusy) return;
+    const id = readIdentity();
+    const errs = [];
+    if (!id.name) errs.push('학생이름을 입력해 주세요.');
+    if (!id.grade) errs.push('학년을 골라 주세요.');
+    if (!isMobile(id.parentPhone)) errs.push('학부모 연락처를 휴대폰 번호로 입력해 주세요.');
+    if (errs.length) { lookupError(errs.join('\n')); return; }
+    lookupError('');
+    lookupBusy = true;
+    const btn = $('lookup-submit');
+    btn.disabled = true; btn.textContent = '조회 중…';
+    try {
+      const res = await api('/api/lookup', { student: id });
+      if (res.status !== 200) { lookupError(res.body.error || '조회하지 못했습니다.'); $('lookup-result').hidden = true; return; }
+      lk.who = id;
+      renderLookup(res.body);
+      $('lookup-result').scrollIntoView({ block: 'start', behavior: 'smooth' });
+    } finally {
+      lookupBusy = false; btn.disabled = false; btn.textContent = '조회하기';
+    }
+  }
+
+  let cancelTarget = null;
+  function openCancel(it) {
+    const L = state.pub.lookup;
+    cancelTarget = it;
+    $('cancel-title').textContent = L.cancelTitle;
+    $('cancel-who').textContent = lk.who.name + ' (' + lk.who.grade + ')';
+    $('cancel-info').textContent = it.info;
+    $('cancel-status').textContent = '현재: ' + (it.kind === 'ok' ? '확정' : '대기 ' + it.waitNo + '번');
+    $('cancel-note').textContent = L.cancelNote;
+    $('cancel-pin-field').hidden = !state.pub.usePin;
+    $('cancel-pin').value = '';
+    $('cancel-error').hidden = true;
+    $('cancel-back').textContent = L.backButton;
+    $('cancel-go').textContent = L.cancelButton;
+    $('cancel-go').disabled = false;
+    $('cancel-dlg').showModal();
+    (state.pub.usePin ? $('cancel-pin') : $('cancel-back')).focus();
+  }
+
+  async function doCancel() {
+    const pin = $('cancel-pin').value.trim();
+    const err = $('cancel-error');
+    if (state.pub.usePin && !/^\d{4}$/.test(pin)) { err.textContent = '비밀번호를 숫자 4자리로 입력해 주세요.'; err.hidden = false; $('cancel-pin').focus(); return; }
+    const go = $('cancel-go');
+    go.disabled = true; go.textContent = '취소 중…';
+    try {
+      const res = await api('/api/cancel', { student: Object.assign({}, lk.who, { pin }), courseId: cancelTarget.courseId });
+      if (res.status !== 200) {
+        err.textContent = res.body.error || '취소하지 못했습니다. 잠시 뒤 다시 해 주세요.';
+        err.hidden = false;
+        if (res.body.code === 'pin') { $('cancel-pin').value = ''; $('cancel-pin').focus(); }
+        return;
+      }
+      $('cancel-dlg').close('done');
+      renderLookup(res.body, '취소했습니다: ' + cancelTarget.info);
+      $('lookup-result').focus();
+      loadPublic().catch(() => {}); // 신청 탭의 남은 자리도 새로
+    } finally {
+      go.disabled = false; go.textContent = state.pub.lookup.cancelButton;
+    }
+  }
+
+  function initLookup() {
+    $('lookup-form').addEventListener('submit', doLookup);
+    $('l-parent').addEventListener('input', (e) => { e.target.value = fmtPhone(e.target.value); });
+    $('cancel-pin').addEventListener('input', (e) => { e.target.value = digits(e.target.value).slice(0, 4); });
+    // [취소하기]·비밀번호 칸 Enter → 취소 실행(창은 성공했을 때만 닫음). [돌아가기]·Esc → 닫기
+    $('cancel-form').addEventListener('submit', (e) => { e.preventDefault(); doCancel(); });
+    $('cancel-back').addEventListener('click', () => $('cancel-dlg').close('back'));
+    document.getElementById('tab-lookup').addEventListener('click', () => prefillLookup(false));
+  }
+
+  // ── 불러오기 ──────────────────────────────────────
+  async function loadPublic() {
+    const res = await api('/api/public');
+    if (res.status !== 200) throw new Error((res.body && res.body.error) || '불러오지 못했습니다.');
+    state.pub = res.body;
+    // 고른 강의도 최신 정보로(없어진 강의는 뺌)
+    const byId = new Map(state.pub.courses.map((c) => [c.id, c]));
+    Array.from(state.picked.keys()).forEach((id) => {
+      if (byId.has(id)) state.picked.set(id, byId.get(id)); else state.picked.delete(id);
+    });
+    renderSubjects();
+    return state.pub;
+  }
+
+  function renderStatic() {
+    const p = state.pub;
+    document.title = p.title;
+    renderGuide(p.guide);
+    $('privacy-text').textContent = p.privacyText;
+    $('parent-text').textContent = p.parentText;
+    $('pin-row').hidden = !p.usePin;
+
+    p.grades.forEach((g) => {
+      $('f-grade').appendChild(new Option(g, g));
+      $('l-grade').appendChild(new Option(g, g));
+    });
+
+    const banner = $('period-banner');
+    const closed = p.period.state !== 'open';
+    banner.hidden = !closed;
+    if (p.period.state === 'before') banner.textContent = '아직 신청 기간이 아닙니다. (시작 ' + p.period.openAt + ')';
+    if (p.period.state === 'after') banner.textContent = '신청 기간이 끝났습니다.';
+    $('submit').disabled = closed;
+    $('start').disabled = closed;
+  }
+
+  function initForm() {
+    $('f-grade').addEventListener('change', onGradeChange);
+    $('f-subject').addEventListener('change', renderCourses);
+    ['f-phone', 'f-parent'].forEach((id) => {
+      $(id).addEventListener('input', (e) => { e.target.value = fmtPhone(e.target.value); });
+    });
+    ['f-pin', 'f-pin2'].forEach((id) => {
+      $(id).addEventListener('input', (e) => { e.target.value = digits(e.target.value).slice(0, 4); });
+    });
+    document.querySelectorAll('#apply-form .input, #apply-form input[type=checkbox]').forEach((i) => {
+      i.addEventListener('input', () => i.removeAttribute('aria-invalid'));
+    });
+    $('apply-form').addEventListener('submit', onSubmit);
+    $('more').addEventListener('click', onMore);
+    $('go-lookup').addEventListener('click', () => {
+      setTab('lookup');
+      if (prefillLookup(true)) doLookup();
+    });
+  }
+
+  async function start() {
+    initTabs();
+    initGuide();
+    initForm();
+    initLookup();
+    const conn = $('conn');
+    try {
+      await loadPublic();
+      renderStatic();
+      renderPicked();
+      conn.dataset.state = 'ok';
+      conn.textContent = '서버 연결됨';
+      $('loading').hidden = true;
+      setTab('apply');
+    } catch (err) {
+      $('loading').hidden = true;
+      $('load-error').textContent = err.message + '\n잠시 뒤 새로 고침해 주세요. 계속 안 되면 학원으로 연락해 주세요.';
+      $('load-error').hidden = false;
+      conn.dataset.state = 'fail';
+      conn.textContent = '서버에 연결하지 못했습니다.';
+    }
+  }
+
+  start();
+})();
+
+</script>
+  <script>if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "알파학원 2027 수강신청",
+  "short_name": "알파 수강신청",
+  "description": "알파학원 2027 수강신청 — 강의를 고르고 신청하거나, 내 신청을 조회·취소합니다.",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": []
+}
