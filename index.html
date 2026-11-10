@@ -70,7 +70,7 @@ a { color: inherit; }
   padding: 14px 8px 12px;
   border: 0; border-bottom: 3px solid transparent;
   background: none; color: var(--muted);
-  font: inherit; font-weight: 600; cursor: pointer;
+  font: inherit; font-size: 1.05rem; font-weight: 600; cursor: pointer;
 }
 .tab.is-active { color: var(--text); border-bottom-color: var(--brand); }
 .tab:focus-visible { outline: 2px solid var(--brand); outline-offset: -4px; }
@@ -139,6 +139,7 @@ fieldset.card > * + * { margin-top: 14px; }
 .hint { margin: 0; color: var(--muted); font-size: .88rem; }
 .pin-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .pin-row .pin-hint { grid-column: 1 / -1; }
+.pin-row .pin-note { grid-column: 1 / -1; margin: -4px 0 0; font-size: .85rem; color: var(--warn); }
 
 /* 버튼 */
 .btn {
@@ -146,7 +147,7 @@ fieldset.card > * + * { margin-top: 14px; }
   min-height: 48px; padding: 10px 18px;
   border: 1px solid var(--brand-dark); border-radius: 10px;
   background: var(--brand-dark); color: #fff;
-  font: inherit; font-weight: 700; text-decoration: none; cursor: pointer;
+  font: inherit; font-size: 1.1rem; font-weight: 700; text-decoration: none; cursor: pointer;
 }
 .btn:active { background: var(--brand-darker); }
 .btn:focus-visible { outline: 3px solid #000; outline-offset: 2px; }
@@ -156,7 +157,7 @@ fieldset.card > * + * { margin-top: 14px; }
 .btn-block { width: 100%; }
 .btn-ghost { background: transparent; border-color: transparent; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
 .btn-ghost:active { background: var(--surface-2); }
-.btn-lg { min-height: 54px; font-size: 1.05rem; }
+.btn-lg { min-height: 54px; font-size: 1.2rem; }
 
 /* 강의 카드 */
 .course-list { display: grid; gap: 10px; }
@@ -185,7 +186,7 @@ fieldset.card > * + * { margin-top: 14px; }
 .picked-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .picked-list li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); }
 .picked-list .info { flex: 1; font-size: .92rem; }
-.remove { flex: none; min-width: 44px; min-height: 36px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--muted); font: inherit; font-size: .85rem; cursor: pointer; }
+.remove { flex: none; min-width: 48px; min-height: 38px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--muted); font: inherit; font-size: .95rem; cursor: pointer; }
 
 /* 동의 */
 .consent { display: grid; gap: 6px; }
@@ -350,6 +351,7 @@ fieldset.card > * + * { margin-top: 14px; }
             <input class="input" id="f-parent" name="parentPhone" type="tel" inputmode="numeric" autocomplete="off" placeholder="010-0000-0000" maxlength="13" required>
           </label>
           <div class="pin-row" id="pin-row">
+            <p class="hint pin-note" id="pin-note" hidden></p>
             <label class="field">
               <span class="field-label">비밀번호 (숫자 4자리)</span>
               <input class="input" id="f-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="4" pattern="\d{4}">
@@ -358,7 +360,7 @@ fieldset.card > * + * { margin-top: 14px; }
               <span class="field-label">비밀번호 확인</span>
               <input class="input" id="f-pin2" type="password" inputmode="numeric" autocomplete="off" maxlength="4" pattern="\d{4}">
             </label>
-            <p class="hint pin-hint">신청 취소·추가 신청할 때 필요합니다. 이미 신청한 적이 있으면 처음 정한 비밀번호를 입력해 주세요.</p>
+            <p class="hint pin-hint">신청을 취소하거나 강의를 추가 신청할 때 필요합니다.</p>
           </div>
         </fieldset>
 
@@ -439,6 +441,10 @@ fieldset.card > * + * { margin-top: 14px; }
         <p class="alert alert-ok" id="lookup-done" hidden></p>
         <p class="empty" id="lookup-empty" hidden></p>
         <ul class="my-list" id="lookup-list"></ul>
+        <div class="result-actions">
+          <button type="button" class="btn btn-block" id="lookup-go-apply">수강신청하러 가기</button>
+          <button type="button" class="btn btn-ghost btn-block" id="lookup-go-home">처음 화면으로</button>
+        </div>
       </section>
     </section>
   </main>
@@ -623,13 +629,16 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
   }
   function initGuide() {
     $('guide-head').addEventListener('click', () => setGuideOpen($('guide-body').hidden));
-    $('start').addEventListener('click', () => {
-      // 신청 결과 화면에서 눌렀으면 새 학생(형제·자매) 입력으로 — 학생 정보를 비우고 신청서를 다시 보여 줌
-      if (!$('result').hidden) resetApplyForm();
-      setGuideOpen(false);
-      $('guide').scrollIntoView({ block: 'start', behavior: 'smooth' });
-      setTimeout(() => $('f-name').focus({ preventScroll: true }), 250);
-    });
+    $('start').addEventListener('click', startApply);
+  }
+  /** [수강신청 시작하기]·[수강신청하러 가기] — 안내문을 접고 학생이름 칸으로 */
+  function startApply() {
+    // 신청 결과 화면이었으면 새 학생(형제·자매) 입력으로 — 학생 정보를 비우고 신청서를 다시 보여 줌
+    if (!$('result').hidden) resetApplyForm();
+    setTab('apply');
+    setGuideOpen(false);
+    $('guide').scrollIntoView({ block: 'start', behavior: 'smooth' });
+    setTimeout(() => $('f-name').focus({ preventScroll: true }), 250);
   }
 
   // ── 학년 → 과목 → 강의 ─────────────────────────────
@@ -803,7 +812,7 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
     const body = $('confirm-body');
     body.textContent = '';
     if (plan.existing && !plan.pinOk) {
-      body.appendChild(el('p', 'note note-error', T.pinWrong));
+      body.appendChild(el('p', 'note note-error', plan.pinMessage || T.pinWrong));
     } else {
       if (plan.existing) body.appendChild(el('p', 'note note-info', T.existing));
       const ul = el('ul', 'dialog-list');
@@ -874,6 +883,7 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
     });
     $('apply-form').hidden = true;
     $('result').hidden = false;
+    setGuideOpen(false); // 안내문이 펼쳐져 있으면 결과가 아래로 밀려 안 보이므로 접음
     $('result').focus();
     $('result').scrollIntoView({ block: 'start' });
   }
@@ -1121,6 +1131,8 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
     $('privacy-text').textContent = p.privacyText;
     $('parent-text').textContent = p.parentText;
     $('pin-row').hidden = !p.usePin;
+    $('pin-note').textContent = p.pinHint || '';
+    $('pin-note').hidden = !p.pinHint;
 
     // 학년 목록(다시 그려도 고른 값은 유지)
     ['f-grade', 'l-grade'].forEach((id) => {
@@ -1174,6 +1186,8 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
       if (prefillLookup(true)) doLookup();
     });
     $('go-home').addEventListener('click', goHome);
+    $('lookup-go-apply').addEventListener('click', startApply);
+    $('lookup-go-home').addEventListener('click', goHome);
   }
 
   async function start() {
