@@ -698,7 +698,6 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
       const seat = courseTag(c);
       if (seat) tags.appendChild(seat);
       if (c.start) tags.appendChild(el('span', 'tag', '개강 ' + fmtDate(c.start)));
-      tags.appendChild(el('span', 'tag', '정원 ' + c.capacity + '명'));
       if (c.grades.length > 1) tags.appendChild(el('span', 'tag', c.grades.join('·')));
       label.appendChild(tags);
       box.appendChild(label);
