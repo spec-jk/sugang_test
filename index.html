@@ -73,6 +73,7 @@ a { color: inherit; }
   font: inherit; font-size: 1.05rem; font-weight: 600; cursor: pointer;
 }
 .tab.is-active { color: var(--text); border-bottom-color: var(--brand); }
+.tab:disabled { color: #B5B5BA; cursor: not-allowed; }
 .tab:focus-visible { outline: 2px solid var(--brand); outline-offset: -4px; }
 
 /* 본문 */
@@ -574,6 +575,7 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
 
   // ── 탭 ────────────────────────────────────────────
   function setTab(name) {
+    if (name === 'lookup' && state.period && state.period !== 'open') name = 'apply'; // 신청 기간이 아니면 조회 탭 막음
     document.querySelectorAll('.tab').forEach((t) => {
       const on = t.dataset.tab === name;
       t.classList.toggle('is-active', on);
@@ -895,7 +897,7 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
     $('f-parent-consent').checked = false;
     renderPicked();
     $('result').hidden = true;
-    $('apply-form').hidden = false;
+    $('apply-form').hidden = !!state.period && state.period !== 'open'; // 신청 기간이 아니면 계속 숨김
     $('f-subject').focus();
   }
 
@@ -1060,7 +1062,7 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
     onGradeChange(); // 과목·강의 목록·학부모 동의 칸도 처음 상태로
     $('picked-note').hidden = true;
     $('result').hidden = true;
-    $('apply-form').hidden = false;
+    $('apply-form').hidden = !!state.period && state.period !== 'open'; // 신청 기간이 아니면 계속 숨김
   }
   function resetLookup() {
     $('l-name').value = '';
@@ -1152,12 +1154,25 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
     const p = state.pub;
     const now = Date.now(), openAt = kst(p.period.openAt), closeAt = kst(p.period.closeAt);
     const st = openAt && now < openAt ? 'before' : closeAt && now > closeAt ? 'after' : 'open';
+    state.period = st;
+    const open = st === 'open';
     const banner = $('period-banner');
-    banner.hidden = st === 'open';
-    if (st === 'before') banner.textContent = '아직 신청 기간이 아닙니다. (시작 ' + p.period.openAt + ')';
-    if (st === 'after') banner.textContent = '신청 기간이 끝났습니다.';
-    $('submit').disabled = st !== 'open';
-    $('start').disabled = st !== 'open';
+    banner.hidden = open;
+    // 안내 문구는 설정 시트(「신청 전 안내」·「신청 마감 안내」)
+    if (st === 'before') banner.textContent = p.period.beforeText || ('아직 신청 기간이 아닙니다. (시작 ' + p.period.openAt + ')');
+    if (st === 'after') banner.textContent = p.period.afterText || '현재는 온라인 수강신청이 불가합니다.';
+    $('submit').disabled = !open;
+    $('start').disabled = !open;
+    // 시작 전: 안내문만(신청서 숨김) · 마감 뒤: 문구만(안내문·신청서 숨김) · 둘 다 조회 탭 막음
+    if (st === 'after') $('guide').hidden = true;
+    else renderGuide(p.guide);
+    if (!open) $('result').hidden = true;
+    $('apply-form').hidden = !open || !$('result').hidden;
+    const lt = $('tab-lookup');
+    lt.disabled = !open;
+    lt.setAttribute('aria-disabled', open ? 'false' : 'true');
+    lt.title = open ? '' : '신청 기간에만 조회할 수 있습니다';
+    if (!open && !$('panel-lookup').hidden) setTab('apply');
     clearTimeout(periodTimer);
     const next = st === 'before' ? openAt : st === 'open' && closeAt ? closeAt : null;
     if (next && next - now < 86400000) {
