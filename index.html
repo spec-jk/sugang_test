@@ -156,6 +156,11 @@ fieldset.card > * + * { margin-top: 14px; }
 .btn-outline { background: var(--surface); color: var(--brand-dark); }
 .btn-outline:active { background: var(--brand-soft); }
 .btn-block { width: 100%; }
+/* 버튼 글자: 줄이 바뀌더라도 단어 중간이 아니라 띄어쓰기에서, 가운데 정렬 */
+.btn { text-align: center; word-break: keep-all; }
+/* 안내문 아래 바로가기 두 개: 휴대폰 폭에 맞춰 글자를 줄여 한 줄로(글꼴을 크게 쓰는 휴대폰 포함) */
+.guide-links .btn { padding: 10px 6px; font-size: min(1.1rem, 3.6vw); }
+.overlap-course { margin: 0; font-weight: 700; }
 .btn-ghost { background: transparent; border-color: transparent; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
 .btn-ghost:active { background: var(--surface-2); }
 .btn-lg { min-height: 54px; font-size: 1.2rem; }
@@ -465,6 +470,20 @@ fieldset.card > * + * { margin-top: 14px; }
     </form>
   </dialog>
 
+  <!-- 시간이 겹치는 강의를 고를 때 뜨는 창 (문구는 설정 시트 「확인창 시간 겹침」) -->
+  <dialog class="dialog" id="overlap-dlg" aria-labelledby="overlap-title">
+    <form method="dialog" class="dialog-inner">
+      <h2 class="dialog-title" id="overlap-title">수업 시간이 겹칩니다</h2>
+      <div class="dialog-body">
+        <p class="overlap-course" id="overlap-course"></p>
+        <p class="note note-error" id="overlap-msg"></p>
+      </div>
+      <div class="dialog-actions single">
+        <button class="btn" value="ok" id="overlap-ok">확인</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- 취소 확인 창 (문구는 설정 시트 「취소창 …」) -->
   <dialog class="dialog" id="cancel-dlg" aria-labelledby="cancel-title">
     <form method="dialog" class="dialog-inner" id="cancel-form">
@@ -567,7 +586,7 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
     return d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7);
   }
   const isMobile = (s) => /^01[016789]\d{7,8}$/.test(digits(s));
-  const fill = (tpl, vars) => String(tpl || '').replace(/\{(대기순번|남은자리|현재상태)\}/g, (m, k) => (k in vars ? vars[k] : m));
+  const fill = (tpl, vars) => String(tpl || '').replace(/\{(대기순번|남은자리|현재상태|겹친강의)\}/g, (m, k) => (k in vars ? vars[k] : m));
   function fmtDate(ymd) {
     if (!ymd) return '';
     const [y, m, d] = ymd.split('-').map(Number);
@@ -696,7 +715,12 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
       cb.checked = state.picked.has(c.id);
       cb.disabled = c.closed;
       cb.addEventListener('change', () => {
-        if (cb.checked) state.picked.set(c.id, c); else state.picked.delete(c.id);
+        if (cb.checked) {
+          // 이미 고른 강의와 요일·시간이 겹치면 고르지 않고 창으로 알림(서버도 다시 검사)
+          const hit = Array.from(state.picked.values()).find((o) => slotsOverlap(c.slot, o.slot));
+          if (hit) { cb.checked = false; showOverlap(c, hit); return; }
+          state.picked.set(c.id, c);
+        } else state.picked.delete(c.id);
         renderPicked();
       });
       label.appendChild(cb);
@@ -711,6 +735,19 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
       label.appendChild(el('span', 'course-meta', [c.time, c.teacher].filter(Boolean).join(' · ')));
       box.appendChild(label);
     });
+  }
+
+  /** 두 수업이 같은 요일에 시간이 겹치는지 — slot은 서버가 「요일·수업시간」 글에서 읽어 줌(못 읽으면 없음 → 검사 안 함) */
+  function slotsOverlap(a, b) {
+    if (!a || !b) return false;
+    return a.days.some((d) => b.days.includes(d)) && a.start < b.end && b.start < a.end;
+  }
+
+  function showOverlap(c, other) {
+    $('overlap-course').textContent = c.info;
+    $('overlap-msg').textContent = fill(state.pub.confirm.overlap || '수업 시간이 겹쳐 함께 신청할 수 없습니다.\n(겹치는 강의: {겹친강의})', { 겹친강의: other.info });
+    $('overlap-dlg').showModal();
+    $('overlap-ok').focus();
   }
 
   function renderPicked() {
@@ -803,6 +840,7 @@ window.SUGANG_API_URL = "https://script.google.com/macros/s/AKfycbzuUyqUj8WzUjpf
       case 'wait': icon = '⏳'; msg = fill(T.wait, { 대기순번: it.waitNo }); cls = 'is-wait'; break;
       case 'already': icon = '✔️'; msg = fill(T.already, { 현재상태: statusText(it.status, it.waitNo) }); cls = 'is-muted'; break;
       case 'closed': icon = '⛔'; msg = T.closed; cls = 'is-muted'; break;
+      case 'overlap': icon = '⛔'; msg = fill(T.overlap || '수업 시간이 겹쳐 함께 신청할 수 없습니다. (겹치는 강의: {겹친강의})', { 겹친강의: it.withInfo }); cls = 'is-muted'; break;
       default: icon = '⛔'; msg = T.unavailable; cls = 'is-muted';
     }
     const li = el('li', 'line ' + cls);
